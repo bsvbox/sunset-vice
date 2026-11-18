@@ -1,5 +1,5 @@
 // Synthesized sound: no audio files, everything comes from WebAudio
-// oscillators and noise. A tiny bassline loop plays while driving.
+// oscillators and noise. A lazy bassline loop plays while the game runs.
 export function createAudio() {
   let ctx = null;
   let muted = false;
@@ -49,7 +49,7 @@ export function createAudio() {
     src.start();
   }
 
-  // A lazy bassline: A minor walk, one note per beat at 112 bpm.
+  // A minor walk, one note per beat at 112 bpm.
   const BASS = [55, 55, 65.41, 49, 55, 55, 82.41, 73.42];
   function startMusic() {
     if (musicTimer || muted) return;

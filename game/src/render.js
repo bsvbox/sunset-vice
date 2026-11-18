@@ -77,7 +77,7 @@ function drawGround(ctx, s) {
       ctx.strokeRect(lot.x + 8 + (i % 2) * 60, lot.y + 8 + Math.floor(i / 2) * 60, 44, 44);
     }
   }
-  // Buildings: coloured block, lighter roof, dark door, lit windows.
+  // Buildings: coloured block, lighter roof edge, dark door, lit windows.
   for (const b of s.city.buildings) {
     ctx.fillStyle = '#20242c';
     ctx.fillRect(b.x + 4, b.y + 5, b.w, b.h);

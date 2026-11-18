@@ -150,7 +150,7 @@ function copSeesPlayer(s) {
 
 // ---- missions -------------------------------------------------------------
 
-function missionTarget(s) {
+export function missionTarget(s) {
   const m = s.missionIndex;
   if (m === 0) return LANDMARKS.garage;
   if (m === 1) return LANDMARKS.docks;
@@ -701,5 +701,3 @@ export function step(s, dt, input) {
   stepPickups(s, dt);
   stepMissions(s, dt);
 }
-
-export { missionTarget };

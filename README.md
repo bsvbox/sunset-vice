@@ -6,8 +6,8 @@ sound are original; nothing comes from Rockstar.
 
 ## Play
 
-Open `game/index.html` in a desktop browser, or run `node serve.ts --port 8081`
-from this repo and visit http://localhost:8081/.
+Open `game/index.html` in a desktop browser, or run `node serve.ts --port 8082`
+from this repo and visit http://localhost:8082/.
 
 - **WASD / arrows** — walk, or drive when in a car
 - **Shift** — run
@@ -33,8 +33,8 @@ police in red and you in white.
 4. **The Score** ($500) — rob the Corner Store (+$200 in the till), then get clean.
 5. **Vice King** ($800) — escape a 3-star manhunt to the North Gate.
 
-Total mission pay: $2,000, plus $200 from the store till = $2,200, plus cash dropped by pedestrians and cops you
-take down.
+Mission rewards total $2,000, plus $200 from the store till = $2,200 total
+earned, plus cash dropped by pedestrians and cops you take down.
 
 ## Wanted level
 

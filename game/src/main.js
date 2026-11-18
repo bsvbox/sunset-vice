@@ -66,7 +66,6 @@ if (shotName) {
 
 let camX = game.player.x, camY = game.player.y;
 let last = performance.now();
-let wasPaused = false;
 
 function resize() {
   canvas.width = window.innerWidth;
@@ -114,7 +113,7 @@ function frame(now) {
         game.screen = 'play';
       }
     } else if (game.screen === 'play') {
-      if (edge('KeyP')) { game.screen = 'paused'; wasPaused = true; }
+      if (edge('KeyP')) { game.screen = 'paused'; }
       if (edge('KeyE')) enterExitCar(game);
       if (edge('KeyF')) punch(game);
       if (input.consumeClick() || input.mouseDown) shoot(game, aimAngle());
@@ -135,7 +134,6 @@ function frame(now) {
       if (edge('Space')) {
         game.screen = 'play';
         p.hp = 100;
-        if (game.screen === 'wasted') p.hp = 100;
         saveGame();
       }
     } else if (game.screen === 'won') {

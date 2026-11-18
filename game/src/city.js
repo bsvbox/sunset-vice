@@ -1,7 +1,7 @@
 // Palmetto Bay: a fictional beach city, all original. The world is a grid of
-// avenues (vertical roads) and streets (horizontal roads). Blocks between the
-// roads hold buildings, parks, parking lots and the mission landmarks.
-// Coordinates are world pixels; the origin is the north-west corner.
+// avenues (vertical roads) and streets (horizontal roads). The blocks between
+// the roads hold buildings, parks and parking lots. Coordinates are world
+// pixels, origin at the north-west corner.
 import { clamp } from './rng.js';
 
 export const WORLD_W = 2880;
@@ -32,8 +32,7 @@ export function nearestRoadPoint(x, y) {
   return best;
 }
 
-// Landmarks the missions and the map use. Each has a spot the player must
-// reach and a short label for the minimap.
+// Landmarks the missions and the map use: a spot to reach and a short label.
 export const LANDMARKS = {
   garage: { x: 624, y: 2016, r: 70, label: 'Garage' },
   docks: { x: 240, y: 936, r: 80, label: 'Docks' },
@@ -50,6 +49,7 @@ export function buildCity(rand) {
   const buildings = [];
   const trees = [];
   const lots = [];
+  const palette = ['#c96f4a', '#4a7a96', '#96784a', '#6a4a8c', '#4a8c5a', '#8c4a5e', '#b0a060'];
   for (let ai = 0; ai < AVENUES.length - 1; ai++) {
     for (let si = 0; si < STREETS.length - 1; si++) {
       const x0 = AVENUES[ai] + ROAD_W / 2 + 14;
@@ -72,9 +72,7 @@ export function buildCity(rand) {
         continue;
       }
       // One or two buildings per block.
-      const split = rand() < 0.5;
-      const palette = ['#c96f4a', '#4a7a96', '#96784a', '#6a4a8c', '#4a8c5a', '#8c4a5e', '#b0a060'];
-      if (split) {
+      if (rand() < 0.5) {
         const mid = x0 + w * (0.42 + rand() * 0.16);
         buildings.push({ x: x0, y: y0, w: mid - x0 - 10, h: h * (0.55 + rand() * 0.3), c: palette[Math.floor(rand() * palette.length)] });
         buildings.push({ x: mid + 10, y: y0 + h * 0.2, w: x1 - mid - 10, h: h * (0.5 + rand() * 0.3), c: palette[Math.floor(rand() * palette.length)] });

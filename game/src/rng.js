@@ -1,5 +1,5 @@
-// Seeded random helpers for Sunset Vice. Deterministic when given a seed,
-// so screenshot scenes and logic tests replay exactly.
+// Seeded random helpers for Sunset Vice. A fixed seed replays the same city
+// and the same test runs, so scenes and logic tests are deterministic.
 export function mulberry32(seed) {
   let a = seed >>> 0;
   return function () {
