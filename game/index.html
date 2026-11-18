@@ -1,18 +1,18 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Sunset Vice — Palmetto Bay</title>
 <style>
-  html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #10131a; }
+  html, body { margin: 0; padding: 0; height: 100%; background: #101418; overflow: hidden; }
   #game { display: block; width: 100vw; height: 100vh; }
-  #status { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+  #status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 </style>
 </head>
 <body>
 <canvas id="game"></canvas>
-<p id="status" aria-live="polite">Sunset Vice is loading.</p>
+<p id="status" aria-live="polite">Sunset Vice — Palmetto Bay. Press Space to start.</p>
 <script type="module" src="./src/main.js"></script>
 </body>
 </html>
