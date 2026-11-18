@@ -1,7 +1,11 @@
 # Sunset Vice
 
+[![make.fun · gta6-01](https://make.fun/badge/gta6-01.svg)](https://make.fun/bounty/gta6-01?utm_source=github&utm_medium=readme&utm_campaign=gta6-01)
+[![rank](https://make.fun/badge/gta6-01/bsvbox/sunset-vice/rank.svg)](https://make.fun/bounty/gta6-01/leaderboard?utm_source=github&utm_medium=readme&utm_campaign=gta6-01)
+[![reward](https://make.fun/badge/gta6-01/bsvbox/sunset-vice/reward.svg)](https://make.fun/bounty/gta6-01?utm_source=github&utm_medium=readme&utm_campaign=gta6-01)
+
 Top-down open-world crime game set in Palmetto Bay, a fictional beach city.
-Built for the make.fun "Make GTA 6" bounty (gta6-01). All art, story and
+Built for the [make.fun "Make GTA 6" bounty](https://make.fun/bounty/gta6-01) (gta6-01). All art, story and
 sound are original; nothing comes from Rockstar.
 
 ## Play
