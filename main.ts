@@ -1,74 +1,78 @@
-// Sunset Vice — dossier entrypoint for make.fun gta6-01 ("Make GTA 6").
-// The game lives in game/ beside this file: plain static files a desktop
-// browser loads offline (game/index.html plus its ES modules, no library,
-// no network request). The screenshots live in screenshots/. This program
-// stages both into the output directory and writes dossier.json there with
-// the vendored make.fun library, so the judge can read the entry.
-// Run it locally with:
+// Sunset Vice — the dossier entrypoint for the make.fun gta6-01 bounty.
+// The game is plain static files under game/ beside this file, and the four
+// screenshots sit in screenshots/. This program copies both trees into the
+// output directory the grader hands over, then asks the vendored make.fun
+// library to summarise them as dossier.json, which is what the judge reads.
+//
+// Run it outside the grader with the output directory in the environment:
 //   MAKEFUN_OUTPUT_DIR=out node main.ts
-// Outside the grader, MAKEFUN_OUTPUT_DIR stands in for /output.
+// Inside the grader the same variable points at /output instead.
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { fileURLToPath as urlToPath } from 'node:url';
-import { buildDossier as makeDossier } from './vendor/makefun-game.ts';
+import { buildDossier as assembleDossier } from './vendor/makefun-game.ts';
 
-// The repository root is the directory holding this file.
+// The folder holding this file is the repository root.
 const repoRoot = path.dirname(urlToPath(import.meta.url));
 
 // The grader hands us /output through the environment; local runs use out/.
-const outDir = process.env.MAKEFUN_OUTPUT_DIR ?? '/output';
+const outDir = process.env.MAKEFUN_OUTPUT_DIR || '/output';
 
-// The scorer's caps for gta6-01, from the kit's gate: the text budget shapes
-// the dossier bytes, the rest refuse an entry the scorer would refuse.
-const TEXT_CAP_BYTES = 163840;
-const SHOT_CAP_COUNT = 4;
-const SHOT_CAP_BYTES = 262144;
-const GAME_CAP_FILES = 993;
-const GAME_CAP_BYTES = 50331648;
-const GAME_CAP_PATH_BYTES = 1000;
+// The scorer's caps for gta6-01, taken from the kit's gate: the text budget
+// shapes the dossier bytes, the rest refuse an entry the scorer would refuse.
+const TEXT_BUDGET_BYTES = 163840;
+const SHOT_LIMIT = 4;
+const SHOT_LIMIT_BYTES = 262144;
+const GAME_LIMIT_FILES = 993;
+const GAME_LIMIT_BYTES = 50331648;
+const GAME_LIMIT_PATH_BYTES = 1000;
 
-// Copy one staged tree, replacing whatever a previous run left behind.
-function stageTree(sourceDir, destDir) {
-  fs.rmSync(destDir, { recursive: true, force: true });
-  fs.cpSync(sourceDir, destDir, { recursive: true });
+// Copy a whole folder, replacing whatever a previous run left behind.
+function copyFolder(from, to) {
+  fs.rmSync(to, { recursive: true, force: true });
+  fs.cpSync(from, to, { recursive: true });
 }
 
-// The screenshots are optional in the repo but required for a good entry:
-// refuse to hand in a dossier with none, instead of a silent empty one.
-function stageShots(sourceDir, destDir) {
-  fs.mkdirSync(destDir, { recursive: true });
-  if (!fs.existsSync(sourceDir)) {
+// Screenshots are optional in a bare repo but required for a good entry:
+// refuse to hand in a dossier with none instead of a silent empty one.
+function copyShots(from, to) {
+  fs.mkdirSync(to, { recursive: true });
+  if (!fs.existsSync(from)) {
     throw new Error('Sunset Vice: no screenshots/ beside main.ts — take the four shots first');
   }
-  const shots = fs.readdirSync(sourceDir).filter((name) => /\.(png|jpe?g)$/i.test(name));
-  if (shots.length === 0) {
-    throw new Error('Sunset Vice: screenshots/ holds no PNG or JPEG image');
+  const names = fs.readdirSync(from).filter((name) => /\.(png|jpe?g)$/i.test(name));
+  if (names.length < 3 || names.length > SHOT_LIMIT) {
+    throw new Error(`Sunset Vice: screenshots/ holds ${names.length} images, need 3 or 4`);
   }
-  for (const name of shots) {
-    fs.copyFileSync(path.join(sourceDir, name), path.join(destDir, name));
+  for (const name of names) {
+    const file = path.join(from, name);
+    if (fs.statSync(file).size > SHOT_LIMIT_BYTES) {
+      throw new Error(`Sunset Vice: screenshot ${name} is over the 256 KiB cap`);
+    }
+    fs.copyFileSync(file, path.join(to, name));
   }
-  return shots.length;
+  return names.length;
 }
 
-function buildEntry() {
+function assemble() {
   const gameDir = path.join(repoRoot, 'game');
   if (!fs.existsSync(path.join(gameDir, 'index.html'))) {
     throw new Error('Sunset Vice: game/index.html is missing — the game is not staged');
   }
   fs.mkdirSync(outDir, { recursive: true });
-  stageTree(gameDir, path.join(outDir, 'game'));
-  const shotCount = stageShots(path.join(repoRoot, 'screenshots'), path.join(outDir, 'screenshots'));
-  const dossier = makeDossier(outDir, {
-    text_max_bytes: TEXT_CAP_BYTES,
-    screenshots: { max: SHOT_CAP_COUNT, max_bytes: SHOT_CAP_BYTES },
-    game_max_files: GAME_CAP_FILES,
-    game_max_bytes: GAME_CAP_BYTES,
-    game_path_max_bytes: GAME_CAP_PATH_BYTES,
+  copyFolder(gameDir, path.join(outDir, 'game'));
+  const shotCount = copyShots(path.join(repoRoot, 'screenshots'), path.join(outDir, 'screenshots'));
+  const dossierText = assembleDossier(outDir, {
+    text_max_bytes: TEXT_BUDGET_BYTES,
+    screenshots: { max: SHOT_LIMIT, max_bytes: SHOT_LIMIT_BYTES },
+    game_max_files: GAME_LIMIT_FILES,
+    game_max_bytes: GAME_LIMIT_BYTES,
+    game_path_max_bytes: GAME_LIMIT_PATH_BYTES,
   });
-  fs.writeFileSync(path.join(outDir, 'dossier.json'), dossier);
+  fs.writeFileSync(path.join(outDir, 'dossier.json'), dossierText);
   const staged = fs.readdirSync(path.join(outDir, 'game'), { recursive: true }).length;
-  console.log(`Sunset Vice: staged ${staged} game entries and ${shotCount} screenshots, dossier ${dossier.length} bytes -> ${outDir}`);
+  console.log(`Sunset Vice: staged ${staged} game entries and ${shotCount} screenshots, dossier ${dossierText.length} bytes -> ${outDir}`);
 }
 
-buildEntry();
+assemble();

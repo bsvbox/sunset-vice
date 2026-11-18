@@ -1,214 +1,157 @@
-// Sunset Vice — the game loop, screens, save and the screenshot mode.
-// Wires input + simulation + renderer together; the simulation itself stays
-// free of the DOM so the headless tests can drive it directly.
-import { createGame, step, punch, shoot, enterExitCar, MISSIONS } from './sim.js';
-import { render } from './render.js';
-import { sceneGame } from './scenes.js';
-import { attach, axis, running, pressed, mouse, consumeClick } from './input.js';
+// Sunset Vice — the browser shell: canvas, game loop, screens, save file.
+// The sim owns the rules; this file owns the frame. A ?shot=<name> query
+// freezes the sim on a staged scene so the screenshots are repeatable.
+import { createGame, step, punch, shoot, enterExitCar, missionObjective } from './sim.js';
+import { render, renderOverlay } from './render.js';
+import { applyScene } from './scenes.js';
+import { attach, axis, running, pressed, endFrame, mousePos, consumeClick } from './input.js';
 import { startAudio, playSfx, toggleMute } from './audio.js';
-import { LANDMARKS } from './city.js';
 
 const SAVE_KEY = 'sunset-vice-save-v1';
 const canvas = document.getElementById('game');
 const statusEl = document.getElementById('status');
 const ctx = canvas.getContext('2d');
 
-const params = new URLSearchParams(location.search);
+const params = new URLSearchParams(window.location.search);
 const shotName = params.get('shot');
-const shotMode = shotName !== null;
 
-let game;
-if (shotMode) {
-  game = sceneGame(shotName);
-  if (!game) {
-    document.body.textContent = `Unknown shot: ${shotName}`;
-    throw new Error(`unknown shot ${shotName}`);
+let game = createGame(20261118);
+let best = 0;
+let frozen = false;
+
+try {
+  const raw = window.localStorage.getItem(SAVE_KEY);
+  if (raw) {
+    const save = JSON.parse(raw);
+    if (typeof save.best === 'number') best = save.best;
+    if (!shotName && typeof save.missionIndex === 'number' && save.missionIndex > 0 && save.missionIndex < 5) {
+      game.missionIndex = save.missionIndex;
+      game.player.cash = save.cash || 50;
+      game.earned = save.earned || 0;
+      game.player.gun = !!save.gun;
+      game.player.ammo = save.ammo || 0;
+    }
   }
-} else {
-  game = createGame(20261118);
-  loadSave(game);
+} catch (e) {
+  best = 0;
 }
 
-function loadSave(s) {
-  try {
-    const raw = localStorage.getItem(SAVE_KEY);
-    if (!raw) return;
-    const data = JSON.parse(raw);
-    if (typeof data.missionIndex === 'number') s.missionIndex = Math.min(data.missionIndex, MISSIONS.length - 1);
-    if (typeof data.cash === 'number') s.player.cash = data.cash;
-    if (typeof data.earned === 'number') s.earned = data.earned;
-    if (typeof data.gun === 'boolean') s.player.gun = data.gun;
-    if (typeof data.ammo === 'number') s.player.ammo = data.ammo;
-  } catch {
-    // A corrupt save is ignored; a fresh game starts instead.
-  }
+if (shotName) {
+  applyScene(game, shotName);
+  frozen = true;
 }
 
-function saveGame(s) {
-  try {
-    localStorage.setItem(SAVE_KEY, JSON.stringify({
-      missionIndex: s.missionIndex,
-      cash: s.player.cash,
-      earned: s.earned,
-      gun: s.player.gun,
-      ammo: s.player.ammo,
-    }));
-  } catch {
-    // Storage may be unavailable; the game still plays.
-  }
-}
+attach(canvas);
 
+let viewW = window.innerWidth;
+let viewH = window.innerHeight;
 function resize() {
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
+  viewW = window.innerWidth;
+  viewH = window.innerHeight;
+  canvas.width = viewW;
+  canvas.height = viewH;
 }
 window.addEventListener('resize', resize);
 resize();
-attach(canvas);
 
-let last = performance.now();
-let camX = game.player.x;
-let camY = game.player.y;
+const cam = { x: game.player.x, y: game.player.y, w: viewW, h: viewH, scale: 1 };
+
+function saveGame() {
+  try {
+    best = Math.max(best, game.earned);
+    window.localStorage.setItem(SAVE_KEY, JSON.stringify({
+      missionIndex: game.missionIndex,
+      cash: game.player.cash,
+      earned: game.earned,
+      gun: game.player.gun,
+      ammo: game.player.ammo,
+      best,
+    }));
+  } catch (e) {
+    // A browser that blocks storage still plays fine.
+  }
+}
 
 function viewScale() {
-  return Math.max(0.7, Math.min(canvas.width / 1300, canvas.height / 850));
+  return Math.max(0.7, Math.min(viewW / 1300, viewH / 850));
 }
 
-function setStatus(text) {
-  if (statusEl) statusEl.textContent = text;
+function startPlaying() {
+  startAudio();
+  game.screen = 'play';
 }
 
-function screenText() {
-  const p = game.player;
-  switch (game.screen) {
-    case 'title':
-      return 'Sunset Vice — title screen. Press Space to start.';
-    case 'paused':
-      return 'Sunset Vice — paused. Press P to continue.';
-    case 'wasted':
-      return 'Sunset Vice — wasted. Press Space to get back up.';
-    case 'busted':
-      return 'Sunset Vice — busted. Press Space to walk free.';
-    case 'won':
-      return 'Sunset Vice — Vice King! Press Space to play again.';
-    default:
-      return `Sunset Vice — Mission ${Math.min(game.missionIndex + 1, 5)} of 5, $${p.cash}, ${p.wanted} stars.`;
-  }
+function restart() {
+  const keepBest = best;
+  game = createGame(20261118);
+  best = keepBest;
+  cam.x = game.player.x;
+  cam.y = game.player.y;
+  game.screen = 'play';
+  startAudio();
 }
 
-function drawOverlay() {
-  const w = canvas.width;
-  const h = canvas.height;
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.fillStyle = 'rgba(8,10,14,0.78)';
-  ctx.fillRect(0, 0, w, h);
-  ctx.textAlign = 'center';
-  ctx.fillStyle = '#ffe9a8';
-  ctx.font = 'bold 64px system-ui, sans-serif';
-  if (game.screen === 'title') {
-    ctx.fillText('SUNSET VICE', w / 2, h / 2 - 110);
-    ctx.fillStyle = '#ffffff';
-    ctx.font = '24px system-ui, sans-serif';
-    ctx.fillText('Palmetto Bay — an open-world crime story', w / 2, h / 2 - 66);
-    ctx.font = '18px system-ui, sans-serif';
-    ctx.fillStyle = '#cfe8c0';
-    ctx.fillText('Work for Rico. Steal cars, dodge the cops, take the city.', w / 2, h / 2 - 30);
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 20px system-ui, sans-serif';
-    ctx.fillText('Press SPACE to start', w / 2, h / 2 + 30);
-    ctx.font = '15px system-ui, sans-serif';
-    ctx.fillStyle = '#bbbbbb';
-    ctx.fillText('WASD move / drive · E steal car · Click shoot · F punch · Shift run · P pause · M mute', w / 2, h / 2 + 66);
-    try {
-      const raw = localStorage.getItem(SAVE_KEY);
-      if (raw) {
-        const data = JSON.parse(raw);
-        ctx.fillStyle = '#ffe9a8';
-        ctx.font = '16px system-ui, sans-serif';
-        ctx.fillText(`Best run: mission ${Math.min(data.missionIndex + 1, 5)} of 5 · earned $${data.earned || 0}`, w / 2, h / 2 + 100);
-      }
-    } catch {
-      // No save to show.
-    }
-  } else if (game.screen === 'paused') {
-    ctx.fillText('PAUSED', w / 2, h / 2 - 20);
-    ctx.fillStyle = '#ffffff';
-    ctx.font = '20px system-ui, sans-serif';
-    ctx.fillText('Press P to continue', w / 2, h / 2 + 20);
-  } else if (game.screen === 'wasted') {
-    ctx.fillStyle = '#d93a3a';
-    ctx.fillText('WASTED', w / 2, h / 2 - 20);
-    ctx.fillStyle = '#ffffff';
-    ctx.font = '20px system-ui, sans-serif';
-    ctx.fillText('You lost half your cash. Press SPACE to get back up.', w / 2, h / 2 + 20);
-  } else if (game.screen === 'busted') {
-    ctx.fillStyle = '#3d7bd9';
-    ctx.fillText('BUSTED', w / 2, h / 2 - 20);
-    ctx.fillStyle = '#ffffff';
-    ctx.font = '20px system-ui, sans-serif';
-    ctx.fillText('Fine paid. Press SPACE to walk free.', w / 2, h / 2 + 20);
-  } else if (game.screen === 'won') {
-    ctx.fillStyle = '#ffe9a8';
-    ctx.fillText('VICE KING', w / 2, h / 2 - 40);
-    ctx.fillStyle = '#ffffff';
-    ctx.font = '22px system-ui, sans-serif';
-    ctx.fillText(`You own Palmetto Bay. Total earned: $${game.earned}`, w / 2, h / 2 + 4);
-    ctx.font = '18px system-ui, sans-serif';
-    ctx.fillText('Press SPACE to play again.', w / 2, h / 2 + 44);
-  }
-}
+let last = performance.now();
+let lastMission = game.missionIndex;
+let lastScreen = game.screen;
 
 function frame(now) {
-  const dt = Math.min(0.05, (now - last) / 1000);
+  const dt = Math.min((now - last) / 1000, 0.05);
   last = now;
 
-  if (!shotMode) {
-    if (pressed('mute')) {
-      const m = toggleMute();
-      setStatus(m ? 'Sunset Vice — sound off.' : 'Sunset Vice — sound on.');
+  cam.w = viewW;
+  cam.h = viewH;
+  cam.scale = viewScale();
+
+  if (!frozen) {
+    if (pressed('Space')) {
+      if (game.screen === 'title') startPlaying();
+      else if (game.screen === 'wasted' || game.screen === 'busted' || game.screen === 'won') restart();
     }
-    if (game.screen === 'title' || game.screen === 'wasted' || game.screen === 'busted' || game.screen === 'won') {
-      if (pressed('start')) {
-        if (game.screen === 'won') {
-          game = createGame(20261118);
-          try { localStorage.removeItem(SAVE_KEY); } catch { /* fresh run anyway */ }
-        }
-        startAudio();
-        game.screen = 'play';
-        saveGame(game);
+    if (pressed('KeyP') && (game.screen === 'play' || game.screen === 'paused')) {
+      game.screen = game.screen === 'play' ? 'paused' : 'play';
+    }
+    if (pressed('KeyM')) toggleMute();
+
+    if (game.screen === 'play') {
+      if (pressed('KeyE')) enterExitCar(game);
+      if (pressed('KeyF')) punch(game);
+      if (consumeClick()) {
+        const m = mousePos();
+        const worldX = cam.x + (m.x - viewW / 2) / cam.scale;
+        const worldY = cam.y + (m.y - viewH / 2) / cam.scale;
+        shoot(game, Math.atan2(worldY - game.player.y, worldX - game.player.x));
       }
-    } else if (game.screen === 'play') {
-      if (pressed('pause')) {
-        game.screen = 'paused';
-      } else {
-        if (pressed('enter')) enterExitCar(game);
-        if (pressed('punch')) punch(game);
-        if (consumeClick()) {
-          const m = mouse();
-          const scale = viewScale();
-          const worldX = camX + (m.x - canvas.width / 2) / scale;
-          const worldY = camY + (m.y - canvas.height / 2) / scale;
-          shoot(game, Math.atan2(worldY - game.player.y, worldX - game.player.x));
-        }
-        const before = game.missionIndex;
-        step(game, dt, { axis: axis(), shift: running() });
-        if (game.missionIndex !== before) saveGame(game);
-        for (const name of game.sfx.splice(0)) playSfx(name);
+      step(game, dt, { axis: axis(), shift: running() });
+      while (game.sfx.length > 0) playSfx(game.sfx.shift());
+      if (game.screen !== lastScreen || game.missionIndex !== lastMission) {
+        saveGame();
+        lastScreen = game.screen;
+        lastMission = game.missionIndex;
       }
-    } else if (game.screen === 'paused') {
-      if (pressed('pause')) game.screen = 'play';
     }
   }
 
-  // Smooth camera follow.
-  const scale = viewScale();
-  const tx = game.player.x;
-  const ty = game.player.y;
-  camX += (tx - camX) * Math.min(1, 6 * dt);
-  camY += (ty - camY) * Math.min(1, 6 * dt);
-  render(ctx, game, { w: canvas.width, h: canvas.height, camX, camY, scale });
-  if (game.screen !== 'play') drawOverlay();
-  setStatus(screenText());
+  // Smooth camera follow, clamped to the world.
+  const targetX = game.player.x;
+  const targetY = game.player.y;
+  cam.x += (targetX - cam.x) * Math.min(1, 5 * dt);
+  cam.y += (targetY - cam.y) * Math.min(1, 5 * dt);
+  const halfW = viewW / cam.scale / 2;
+  const halfH = viewH / cam.scale / 2;
+  cam.x = Math.max(halfW, Math.min(2880 - halfW, cam.x));
+  cam.y = Math.max(halfH, Math.min(2160 - halfH, cam.y));
+
+  ctx.clearRect(0, 0, viewW, viewH);
+  render(ctx, game, cam, now);
+  if (game.screen !== 'play') renderOverlay(ctx, game, viewW, viewH, best);
+
+  if (statusEl) {
+    const p = game.player;
+    statusEl.textContent = `${missionObjective(game)} Cash $${p.cash} — wanted ${p.wanted} stars — screen ${game.screen}`;
+  }
+
+  endFrame();
   requestAnimationFrame(frame);
 }
 

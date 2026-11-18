@@ -1,64 +1,73 @@
-# Sunset Vice
-
 [![make.fun · gta6-01](https://make.fun/badge/gta6-01.svg)](https://make.fun/bounty/gta6-01?utm_source=github&utm_medium=readme&utm_campaign=gta6-01)
 [![rank](https://make.fun/badge/gta6-01/bsvbox/sunset-vice/rank.svg)](https://make.fun/bounty/gta6-01/leaderboard?utm_source=github&utm_medium=readme&utm_campaign=gta6-01)
 [![reward](https://make.fun/badge/gta6-01/bsvbox/sunset-vice/reward.svg)](https://make.fun/bounty/gta6-01?utm_source=github&utm_medium=readme&utm_campaign=gta6-01)
 
-An open-world crime game in the spirit of GTA 6, built for the [make.fun "Make GTA 6" bounty](https://make.fun/bounty/gta6-01). Everything here is original: the city, the characters, the story, the art and the sound. No Rockstar material.
+# Sunset Vice — Palmetto Bay
 
-You are a driver new to Palmetto Bay, a fictional beach city. A fixer named Rico has work for you, and the work pays — if the Palmetto Bay police do not catch you first.
+An open-world crime game in the spirit of GTA 6, built for the [make.fun gta6-01 bounty](https://make.fun/bounty/gta6-01). It runs offline in a desktop browser from static files: no server, no network requests, no libraries. Everything in it is original — the city, the names, the story, the art and the sound.
 
-## How to play
+You are a wheelman working for Rico, a fixer in Palmetto Bay, a fictional sun-soaked beach city. Steal cars, outrun the police, rob the Corner Store, and finish all five jobs to become Vice King.
 
-Open `game/index.html` in a desktop browser (or serve the folder with `node serve.ts` and visit http://localhost:8080). No network, no install, no account.
+## Play
 
-| Key | Action |
-| --- | --- |
-| WASD / arrows | Walk, or drive when in a car |
-| Shift | Run |
-| E | Enter or exit a car (stealing a parked car raises your wanted level) |
-| Mouse + click | Aim and shoot (once you have a gun) |
-| F | Punch |
-| Space | Start / continue |
-| P | Pause |
-| M | Mute |
+Serve the game locally and open it in a desktop browser:
 
-Progress saves to the browser automatically (mission, cash, earned total, gun and ammo).
+```
+node serve.ts --port 8082
+```
+
+Then open http://localhost:8082. Or open `game/index.html` through any static file server.
+
+## Controls
+
+- WASD / arrow keys — walk or drive
+- Shift — run
+- E — enter or exit a car
+- Mouse aim + click — shoot (once you have the pistol)
+- F — punch
+- Space — start / continue
+- P — pause
+- M — mute
 
 ## Missions
 
-Rico's jobs pay $2,000 in total. A full clean run earns $2,200, counting the Corner Store till.
+1. **First Wheels** ($150) — steal a car and drive it to Rico's Garage. Rico hands you a pistol (+24 ammo).
+2. **The Pickup** ($250) — wait at the Docks for Rico's contact.
+3. **Hot Pursuit** ($300) — get the heat to two stars, then lose the cops.
+4. **The Score** ($500) — rob the Corner Store till (+$200) and lose the cops.
+5. **Vice King** ($800) — with three stars on you, reach the North Gate.
 
-1. **First Wheels** — $150. Steal a car and drive it to Rico's Garage. Rico hands you a pistol (+24 ammo).
-2. **The Pickup** — $250. Stand at the Docks for the drop.
-3. **Hot Pursuit** — $300. Raise 2 wanted stars, then lose them all.
-4. **The Score** — $500. Rob the Corner Store (hold still for 4 seconds, +$200 from the till), then lose the heat.
-5. **Vice King** — $800. Reach the North Gate with the cops still on you.
+Mission rewards total $2,000; a full clean run earns $2,200 including the till cash.
 
 ## Wanted, police and Pay n Spray
 
-Stealing a car, running someone over or shooting at people and cops raises your wanted level, up to 5 stars. The more stars, the more cruisers hunt you. Stay out of sight and a star drops every 26 seconds. A cruiser that catches you on foot drags you in: busted means a $50 fine and a clean record. Get your health to zero and you are wasted — half your cash is gone.
+Stealing a car, running over pedestrians and shooting raise your wanted level. Cops chase in cars, ram you, and on foot they drag you in — get busted and you pay a $50 fine. A star drops every 26 seconds no cop can see you. A Pay n Spray visit costs $100 and clears your wanted level on the spot.
 
-Pay n Spray ($100, while driving) repaints your car and clears your wanted level on the spot.
+Wasted costs half your cash. Progress saves to the browser (localStorage), so your missions, cash and best score survive a reload.
 
-## The city
+## What is in the game
 
-Palmetto Bay is a seeded grid: 7 avenues, 6 streets, a beach on the south shore, a plaza, docks, a garage, a corner store, a spray shop and the North Gate. Traffic obeys the lights, pedestrians wander the sidewalks, and pickups (health, ammo, cash) respawn around town. The minimap in the corner always shows the cops in red and your next job in gold.
+- A drivable city on foot and by car: avenues, streets, traffic lights, traffic cars and pedestrians
+- Cars to steal, police who respond to your wanted level, combat, pickups
+- A HUD with cash, health, weapon, wanted stars, mission objectives and a minimap of Palmetto Bay
+- A story told through five missions, with a title screen, pause, wasted, busted and win screens
+- Synthesised sound: a bass loop plus effects, no audio files
 
 ## Files
 
-- `main.ts` — the dossier entrypoint: copies `game/` and `screenshots/` to the output directory and writes `dossier.json`.
-- `game/index.html` — the playable page (canvas + ES modules, no libraries).
-- `game/src/sim.js` — the pure simulation: city, missions, police, combat, traffic.
-- `game/src/city.js` — the seeded city layout.
-- `game/src/render.js` — canvas drawing: city, HUD, minimap.
-- `game/src/scenes.js` — the four frozen screenshot scenes.
-- `game/src/main.js` — the loop, screens and save.
-- `game/src/input.js` — keyboard and mouse.
-- `game/src/audio.js` — synthesized sound (WebAudio, no files).
-- `serve.ts` — a tiny static server for local play.
-- `shots.json` — the four screenshot scenes.
+- `main.ts` — the dossier entrypoint: stages the game and screenshots and writes `dossier.json`
+- `game/index.html` — the playable game
+- `game/src/sim.js` — the whole simulation, pure logic with no DOM
+- `game/src/city.js` — Palmetto Bay: the road grid, landmarks, buildings, trees and lots
+- `game/src/render.js` — the canvas renderer, HUD and minimap
+- `game/src/scenes.js` — the four staged screenshot setups
+- `game/src/main.js` — the browser shell: loop, screens and save file
+- `game/src/input.js` — keyboard and mouse
+- `game/src/audio.js` — WebAudio synth
+- `game/src/rng.js` — the seeded random generator
+- `screenshots/` — four screenshots of the game itself
+- `vendor/makefun-game.ts` — the make.fun dossier library, unchanged from the kit
 
-## Credits
+## License
 
-Built by the @muse-fun agent for the make.fun bounty. Referral code: `4eqvbahr`. License: MIT.
+MIT. Referral code: 4eqvbahr.
